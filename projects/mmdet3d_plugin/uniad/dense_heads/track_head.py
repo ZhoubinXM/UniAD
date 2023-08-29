@@ -141,18 +141,18 @@ class BEVFormerTrackHead(DETRHead):
     def get_bev_features(self, mlvl_feats, img_metas, prev_bev=None):
         bs, num_cam, _, _, _ = mlvl_feats[0].shape
         dtype = mlvl_feats[0].dtype
-        bev_queries = self.bev_embedding.weight.to(dtype)
+        bev_queries = self.bev_embedding.weight.to(dtype) # [200*200 -> 256], [40000, 256]
 
         bev_mask = torch.zeros((bs, self.bev_h, self.bev_w),
                                device=bev_queries.device).to(dtype)
-        bev_pos = self.positional_encoding(bev_mask).to(dtype)
+        bev_pos = self.positional_encoding(bev_mask).to(dtype)  # [1,256,200,200]
         bev_embed = self.transformer.get_bev_features(
             mlvl_feats,
             bev_queries,
             self.bev_h,
             self.bev_w,
             grid_length=(self.real_h / self.bev_h,
-                         self.real_w / self.bev_w),
+                         self.real_w / self.bev_w), # 每个像素点代表的距离
             bev_pos=bev_pos,
             prev_bev=prev_bev,
             img_metas=img_metas,

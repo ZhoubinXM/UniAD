@@ -1,0 +1,48 @@
+{
+  "configurations": [
+  
+    {
+      "name": "Create_data",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/create_data.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": [
+        "nuscenes",
+        "--root-path",
+        "./data/nuscenes/mini",
+        "--out-dir",
+        "./data/info",
+        "--extra-tag",
+        "test",
+        "--canbus",
+        "./data/nuscenes",
+        "--version",
+        "v1.0-mini",
+      ],
+    },
+    {
+      "name": "Train_stage2",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/train.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": [
+        "./projects/configs/stage2_e2e/base_e2e.py",        
+      ],
+    },
+    {
+      "name": "Train_stage1",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/train.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": [
+        "./projects/configs/stage1_track_map/base_track_map.py"
+      ],
+    }
+  ]
+}

@@ -263,7 +263,7 @@ model = dict(
                     attn_cfgs=dict(
                         type='MultiScaleDeformableAttention',
                         embed_dims=_dim_,
-                        num_levels=_num_levels_,
+                        num_levels=1,
                          ),
                     feedforward_channels=_feed_dim_,
                     ffn_dropout=0.1,
@@ -283,7 +283,7 @@ model = dict(
                         dict(
                             type='MultiScaleDeformableAttention',
                             embed_dims=_dim_,
-                            num_levels=_num_levels_,
+                            num_levels=1,
                         )
                     ],
                     feedforward_channels=_feed_dim_,
@@ -327,71 +327,71 @@ model = dict(
             sampler_with_mask =dict(type='PseudoSampler_segformer'),
         ),
     ),
-    occ_head=dict(
-        type='OccHead',
+    # occ_head=dict(
+    #     type='OccHead',
 
-        grid_conf=occflow_grid_conf,
-        ignore_index=255,
+    #     grid_conf=occflow_grid_conf,
+    #     ignore_index=255,
 
-        bev_proj_dim=256,
-        bev_proj_nlayers=4,
+    #     bev_proj_dim=256,
+    #     bev_proj_nlayers=4,
 
-        # Transformer
-        attn_mask_thresh=0.3,
-        transformer_decoder=dict(
-            type='DetrTransformerDecoder',
-            return_intermediate=True,
-            num_layers=5,
-            transformerlayers=dict(
-                type='DetrTransformerDecoderLayer',
-                attn_cfgs=dict(
-                    type='MultiheadAttention',
-                    embed_dims=256,
-                    num_heads=8,
-                    attn_drop=0.0,
-                    proj_drop=0.0,
-                    dropout_layer=None,
-                    batch_first=False),
-                ffn_cfgs=dict(
-                    embed_dims=256,
-                    feedforward_channels=2048,  # change to 512
-                    num_fcs=2,
-                    act_cfg=dict(type='ReLU', inplace=True),
-                    ffn_drop=0.0,
-                    dropout_layer=None,
-                    add_identity=True),
-                feedforward_channels=2048,
-                operation_order=('self_attn', 'norm', 'cross_attn', 'norm',
-                                 'ffn', 'norm')),
-            init_cfg=None),
-        # Query
-        query_dim=256,
-        query_mlp_layers=3,
+    #     # Transformer
+    #     attn_mask_thresh=0.3,
+    #     transformer_decoder=dict(
+    #         type='DetrTransformerDecoder',
+    #         return_intermediate=True,
+    #         num_layers=5,
+    #         transformerlayers=dict(
+    #             type='DetrTransformerDecoderLayer',
+    #             attn_cfgs=dict(
+    #                 type='MultiheadAttention',
+    #                 embed_dims=256,
+    #                 num_heads=8,
+    #                 attn_drop=0.0,
+    #                 proj_drop=0.0,
+    #                 dropout_layer=None,
+    #                 batch_first=False),
+    #             ffn_cfgs=dict(
+    #                 embed_dims=256,
+    #                 feedforward_channels=2048,  # change to 512
+    #                 num_fcs=2,
+    #                 act_cfg=dict(type='ReLU', inplace=True),
+    #                 ffn_drop=0.0,
+    #                 dropout_layer=None,
+    #                 add_identity=True),
+    #             feedforward_channels=2048,
+    #             operation_order=('self_attn', 'norm', 'cross_attn', 'norm',
+    #                              'ffn', 'norm')),
+    #         init_cfg=None),
+    #     # Query
+    #     query_dim=256,
+    #     query_mlp_layers=3,
 
-        aux_loss_weight=1.,
-        loss_mask=dict(
-            type='FieryBinarySegmentationLoss',
-            use_top_k=True,
-            top_k_ratio=0.25,
-            future_discount=0.95,
-            loss_weight=5.0,
-            ignore_index=255,
-        ),
-        loss_dice=dict(
-            type='DiceLossWithMasks',
-            use_sigmoid=True,
-            activate=True,
-            reduction='mean',
-            naive_dice=True,
-            eps=1.0,
-            ignore_index=255,
-            loss_weight=1.0),
+    #     aux_loss_weight=1.,
+    #     loss_mask=dict(
+    #         type='FieryBinarySegmentationLoss',
+    #         use_top_k=True,
+    #         top_k_ratio=0.25,
+    #         future_discount=0.95,
+    #         loss_weight=5.0,
+    #         ignore_index=255,
+    #     ),
+    #     loss_dice=dict(
+    #         type='DiceLossWithMasks',
+    #         use_sigmoid=True,
+    #         activate=True,
+    #         reduction='mean',
+    #         naive_dice=True,
+    #         eps=1.0,
+    #         ignore_index=255,
+    #         loss_weight=1.0),
 
         
-        pan_eval=True,
-        test_seg_thresh=0.1,
-        test_with_track_score=True,
-    ),
+    #     pan_eval=True,
+    #     test_seg_thresh=0.1,
+    #     test_with_track_score=True,
+    # ),
     motion_head=dict(
         type='MotionHead',
         bev_h=bev_h_,
@@ -437,18 +437,18 @@ model = dict(
                 operation_order=('cross_attn', 'norm', 'ffn', 'norm')),
         ),
     ),
-    planning_head=dict(
-        type='PlanningHeadSingleMode',
-        embed_dims=256,
-        planning_steps=planning_steps,
-        loss_planning=dict(type='PlanningLoss'),
-        loss_collision=[dict(type='CollisionLoss', delta=0.0, weight=2.5),
-                        dict(type='CollisionLoss', delta=0.5, weight=1.0),
-                        dict(type='CollisionLoss', delta=1.0, weight=0.25)],
-        use_col_optim=use_col_optim,
-        planning_eval=True,
-        with_adapter=True,
-    ),
+    # planning_head=dict(
+    #     type='PlanningHeadSingleMode',
+    #     embed_dims=256,
+    #     planning_steps=planning_steps,
+    #     loss_planning=dict(type='PlanningLoss'),
+    #     loss_collision=[dict(type='CollisionLoss', delta=0.0, weight=2.5),
+    #                     dict(type='CollisionLoss', delta=0.5, weight=1.0),
+    #                     dict(type='CollisionLoss', delta=1.0, weight=0.25)],
+    #     use_col_optim=use_col_optim,
+    #     planning_eval=True,
+    #     with_adapter=True,
+    # ),
     # model training and testing settings
     train_cfg=dict(
         pts=dict(

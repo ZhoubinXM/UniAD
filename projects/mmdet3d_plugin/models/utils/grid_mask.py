@@ -67,6 +67,7 @@ class Grid(object):
         return img, label
 
 
+# Use GridMask to 数据增强
 class GridMask(nn.Module):
     def __init__(self, use_h, use_w, rotate = 1, offset=False, ratio = 0.5, mode=0, prob = 1.):
         super(GridMask, self).__init__()
@@ -83,7 +84,7 @@ class GridMask(nn.Module):
         self.prob = self.st_prob * epoch / max_epoch #+ 1.#0.5
     @auto_fp16()
     def forward(self, x):
-        if np.random.rand() > self.prob or not self.training:
+        if np.random.rand() > self.prob or not self.training:  # 随机数大于应用掩码的概率or不在训练，return图像
             return x
         n,c,h,w = x.size()
         x = x.view(-1,h,w)

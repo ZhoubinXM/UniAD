@@ -2,6 +2,8 @@ import cv2
 import torch
 import argparse
 import os
+import sys
+sys.path.append(".")
 import glob
 import numpy as np
 import mmcv
@@ -108,8 +110,12 @@ class Visualizer:
             track_velocity = bboxes.tensor.cpu().detach().numpy()[:, -2:]
 
             # trajectories
-            trajs = outputs[k][f'traj'].numpy()
-            traj_scores = outputs[k][f'traj_scores'].numpy()
+            try:
+                trajs = outputs[k][f'traj'].numpy()
+                traj_scores = outputs[k][f'traj_scores'].numpy()
+            except:
+                trajs = None
+                traj_scores = None
 
             predicted_agent_list = []
 
@@ -149,8 +155,8 @@ class Visualizer:
                         track_dims[i],
                         track_yaw[i],
                         track_velocity[i],
-                        trajs[i],
-                        traj_scores[i],
+                        trajs,
+                        traj_scores,
                         pred_track_id=track_id,
                         pred_occ_map=occ_map_cur,
                         past_pred_traj=None
@@ -253,8 +259,8 @@ class Visualizer:
         self.cam_render.render_image_data(sample_token, self.nusc)
         self.cam_render.render_pred_track_bbox(
             self.predictions[sample_token]['predicted_agent_list'], sample_token, self.nusc)
-        self.cam_render.render_pred_traj(
-            self.predictions[sample_token]['predicted_agent_list'], sample_token, self.nusc, render_sdc=self.with_planning)
+        # self.cam_render.render_pred_traj(
+        #     self.predictions[sample_token]['predicted_agent_list'], sample_token, self.nusc, render_sdc=self.with_planning)
         self.cam_render.save_fig(out_filename + '_cam.jpg')
 
     def combine(self, out_filename):
@@ -287,9 +293,9 @@ def main(args):
     render_cfg = dict(
         with_occ_map=False,
         with_map=False,
-        with_planning=True,
+        with_planning=False,
         with_pred_box=True,
-        with_pred_traj=True,
+        with_pred_traj=False,
         show_gt_boxes=False,
         show_lidar=False,
         show_command=True,
@@ -299,7 +305,7 @@ def main(args):
         show_sdc_traj=False
     )
 
-    viser = Visualizer(version='v1.0-mini', predroot=args.predroot, dataroot='data/nuscenes', **render_cfg)
+    viser = Visualizer(version='v1.0-mini', predroot=args.predroot, dataroot='data/nuscenes/mini', **render_cfg)
 
     if not os.path.exists(args.out_folder):
         os.makedirs(args.out_folder)

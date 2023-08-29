@@ -1,6 +1,7 @@
 import argparse
 from os import path as osp
 import sys
+
 from data_converter import uniad_nuscenes_converter as nuscenes_converter
 sys.path.append('.')
 

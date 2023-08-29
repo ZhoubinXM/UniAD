@@ -154,21 +154,21 @@ class UniADTrack(MVXTwoStageDetector):
         """Extract features of images."""
         if img is None:
             return None
-        assert img.dim() == 5
+        assert img.dim() == 5 # img [B*His, 3, 928, 1600]
         B, N, C, H, W = img.size()
         img = img.reshape(B * N, C, H, W)
-        if self.use_grid_mask:
+        if self.use_grid_mask: # 是否使用数据增强
             img = self.grid_mask(img)
-        img_feats = self.img_backbone(img)
+        img_feats = self.img_backbone(img) # [6, 516, 112, 200] [6, 1024, 58, 100] [6 2048 39 50]
         if isinstance(img_feats, dict):
             img_feats = list(img_feats.values())
-        if self.with_img_neck:
+        if self.with_img_neck: # neck FPN
             img_feats = self.img_neck(img_feats)
-
+        # [6,256,112,200] [6, 256, 58, 100] [6, 256, 59, 50] [6, 256,15,25]
         img_feats_reshaped = []
         for img_feat in img_feats:
             _, c, h, w = img_feat.size()
-            if len_queue is not None:
+            if len_queue is not None: # [1, 1, ...]
                 img_feat_reshaped = img_feat.view(B//len_queue, len_queue, N, c, h, w)
             else:
                 img_feat_reshaped = img_feat.view(B, N, c, h, w)
@@ -177,9 +177,10 @@ class UniADTrack(MVXTwoStageDetector):
 
     def _generate_empty_tracks(self):
         track_instances = Instances((1, 1))
-        num_queries, dim = self.query_embedding.weight.shape  # (300, 256 * 2)
+        num_queries, dim = self.query_embedding.weight.shape  # (900+1, 256 * 2) last 1 is ego-vehicle
         device = self.query_embedding.weight.device
         query = self.query_embedding.weight
+        # 用embedding的前256个query (901, 3)
         track_instances.ref_pts = self.reference_points(query[..., : dim // 2])
 
         # init boxes: xy, wl, z, h, sin, cos, vx, vy, vz
@@ -315,7 +316,7 @@ class UniADTrack(MVXTwoStageDetector):
 
     def get_history_bev(self, imgs_queue, img_metas_list):
         """
-        Get history BEV features iteratively. To save GPU memory, gradients are not calculated.
+        Get history BEV features iteratively. To save GPU memory, gradients are not calculated. 生成历史bev feature
         """
         self.eval()
         with torch.no_grad():
@@ -335,7 +336,7 @@ class UniADTrack(MVXTwoStageDetector):
 
     # Generate bev using bev_encoder in BEVFormer
     def get_bevs(self, imgs, img_metas, prev_img=None, prev_img_metas=None, prev_bev=None):
-        if prev_img is not None and prev_img_metas is not None:
+        if prev_img is not None and prev_img_metas is not None: # 对于第一帧生成bev feature
             assert prev_bev is None
             prev_bev = self.get_history_bev(prev_img, prev_img_metas)
 
@@ -376,7 +377,7 @@ class UniADTrack(MVXTwoStageDetector):
         Perform forward only on one frame. Called in  forward_train
         Warnning: Only Support BS=1
         Args:
-            img: shape [B, num_cam, 3, H, W]
+            img: shape [B, num_cam, 3, H, W] prev_img: [1, 1, 6, 3, 928, 1600]
             if l2g_r2 is None or l2g_t2 is None:
                 it means this frame is the end of the training clip,
                 so no need to call velocity update
@@ -509,7 +510,7 @@ class UniADTrack(MVXTwoStageDetector):
         Returns:
         """
         track_instances = self._generate_empty_tracks()
-        num_frame = img.size(1)
+        num_frame = img.size(1) # img [1, 3, 6, 3, 928, 1600]
         # init gt instances!
         gt_instances_list = []
 
@@ -517,7 +518,7 @@ class UniADTrack(MVXTwoStageDetector):
             gt_instances = Instances((1, 1))
             boxes = gt_bboxes_3d[0][i].tensor.to(img.device)
             # normalize gt bboxes here!
-            boxes = normalize_bbox(boxes, self.pc_range)
+            boxes = normalize_bbox(boxes, self.pc_range)  # rot -> {sin(rot), cos(rot)} -> 10
             sd_boxes = gt_sdc_bbox[0][i].tensor.to(img.device)
             sd_boxes = normalize_bbox(sd_boxes, self.pc_range)
             gt_instances.boxes = boxes
@@ -529,7 +530,7 @@ class UniADTrack(MVXTwoStageDetector):
             gt_instances.sdc_labels = torch.cat([gt_sdc_label[0][i] for _ in range(gt_labels_3d[0][i].shape[0])], dim=0)
             gt_instances_list.append(gt_instances)
 
-        self.criterion.initialize_for_single_clip(gt_instances_list)
+        self.criterion.initialize_for_single_clip(gt_instances_list)  # gt label -> loss cal
 
         out = dict()
 
@@ -538,14 +539,14 @@ class UniADTrack(MVXTwoStageDetector):
             prev_img_metas = copy.deepcopy(img_metas)
             # TODO: Generate prev_bev in an RNN way.
 
-            img_single = torch.stack([img_[i] for img_ in img], dim=0)
+            img_single = torch.stack([img_[i] for img_ in img], dim=0) # get single frame img.
             img_metas_single = [copy.deepcopy(img_metas[0][i])]
             if i == num_frame - 1:
                 l2g_r2 = None
                 l2g_t2 = None
                 time_delta = None
             else:
-                l2g_r2 = l2g_r_mat[0][i + 1]
+                l2g_r2 = l2g_r_mat[0][i + 1]  # 下一帧中雷达到世界坐标系的旋转矩阵与时间差
                 l2g_t2 = l2g_t[0][i + 1]
                 time_delta = timestamp[0][i + 1] - timestamp[0][i]
             all_query_embeddings = []
@@ -558,9 +559,9 @@ class UniADTrack(MVXTwoStageDetector):
                 track_instances,
                 prev_img,
                 prev_img_metas,
-                l2g_r_mat[0][i],
+                l2g_r_mat[0][i],  # 当前帧的旋转矩阵
                 l2g_t[0][i],
-                l2g_r2,
+                l2g_r2,  # 下一帧的旋转矩阵
                 l2g_t2,
                 time_delta,
                 all_query_embeddings,

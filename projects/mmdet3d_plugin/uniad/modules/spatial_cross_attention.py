@@ -134,7 +134,7 @@ class SpatialCrossAttention(BaseModule):
 
         D = reference_points_cam.size(3)
         indexes = []
-        for i, mask_per_img in enumerate(bev_mask):
+        for i, mask_per_img in enumerate(bev_mask):  # bev_mask [6, 1, 40000, 4] 获取每张图片上有效query的index
             index_query_per_img = mask_per_img[0].sum(-1).nonzero().squeeze(-1)
             indexes.append(index_query_per_img)
         max_len = max([len(each) for each in indexes])
@@ -147,8 +147,8 @@ class SpatialCrossAttention(BaseModule):
         
         for j in range(bs):
             for i, reference_points_per_img in enumerate(reference_points_cam):   
-                index_query_per_img = indexes[i]
-                queries_rebatch[j, i, :len(index_query_per_img)] = query[j, index_query_per_img]
+                index_query_per_img = indexes[i]  # 每个image上的query
+                queries_rebatch[j, i, :len(index_query_per_img)] = query[j, index_query_per_img]  # 重新整合query，只要在该图片上的query index
                 reference_points_rebatch[j, i, :len(index_query_per_img)] = reference_points_per_img[j, index_query_per_img]
 
         num_cams, l, bs, embed_dims = key.shape
@@ -157,21 +157,21 @@ class SpatialCrossAttention(BaseModule):
             bs * self.num_cams, l, self.embed_dims)
         value = value.permute(2, 0, 1, 3).reshape(
             bs * self.num_cams, l, self.embed_dims)
-
+        # output quires [bs, 6, max_len_queries, embed_dim]
         queries = self.deformable_attention(query=queries_rebatch.view(bs*self.num_cams, max_len, self.embed_dims), key=key, value=value,
                                             reference_points=reference_points_rebatch.view(bs*self.num_cams, max_len, D, 2), spatial_shapes=spatial_shapes,
                                             level_start_index=level_start_index).view(bs, self.num_cams, max_len, self.embed_dims)
         for j in range(bs):
-            for i, index_query_per_img in enumerate(indexes):
+            for i, index_query_per_img in enumerate(indexes):  # 将输出的6个环视图像的特征加到一起，取平均值
                 slots[j, index_query_per_img] += queries[j, i, :len(index_query_per_img)]
 
         count = bev_mask.sum(-1) > 0
         count = count.permute(1, 2, 0).sum(-1)
         count = torch.clamp(count, min=1.0)
         slots = slots / count[..., None]
-        slots = self.output_proj(slots)
+        slots = self.output_proj(slots)  # 过映射(bs, 40000, 256)
 
-        return self.dropout(slots) + inp_residual
+        return self.dropout(slots) + inp_residual  # 残差连接
 
 
 @ATTENTION.register_module()
@@ -333,9 +333,9 @@ class MSDeformableAttention3D(BaseModule):
         value = self.value_proj(value)
         if key_padding_mask is not None:
             value = value.masked_fill(key_padding_mask[..., None], 0.0)
-        value = value.view(bs, num_value, self.num_heads, -1)
-        sampling_offsets = self.sampling_offsets(query).view(
-            bs, num_query, self.num_heads, self.num_levels, self.num_points, 2)
+        value = value.view(bs, num_value, self.num_heads, -1)  # value project后，分成num head个小特征图（1,30825,8,32）
+        sampling_offsets = self.sampling_offsets(query).view(  
+            bs, num_query, self.num_heads, self.num_levels, self.num_points, 2)  # num query maxium of valid query in 6 cams
         attention_weights = self.attention_weights(query).view(
             bs, num_query, self.num_heads, self.num_levels * self.num_points)
 

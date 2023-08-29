@@ -3,6 +3,8 @@ from __future__ import division
 import argparse
 import cv2
 import torch
+import sys
+sys.path.append('.')
 import sklearn
 import mmcv
 import copy

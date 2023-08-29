@@ -122,7 +122,7 @@ class PerceptionTransformer(BaseModule):
             [each['can_bus'][-2] / np.pi * 180 for each in img_metas])
         grid_length_y = grid_length[0]
         grid_length_x = grid_length[1]
-        translation_length = np.sqrt(delta_x ** 2 + delta_y ** 2)
+        translation_length = np.sqrt(delta_x ** 2 + delta_y ** 2)  # L2 distance
         translation_angle = np.arctan2(delta_y, delta_x) / np.pi * 180
         bev_angle = ego_angle - translation_angle
         shift_y = translation_length * \
@@ -151,7 +151,7 @@ class PerceptionTransformer(BaseModule):
         # add can bus signals
         can_bus = bev_queries.new_tensor(
             [each['can_bus'] for each in img_metas])  # [:, :]
-        can_bus = self.can_bus_mlp(can_bus)[None, :, :]
+        can_bus = self.can_bus_mlp(can_bus)[None, :, :]  # [18, 128] -> [128, 256]
         bev_queries = bev_queries + can_bus * self.use_can_bus
 
         feat_flatten = []

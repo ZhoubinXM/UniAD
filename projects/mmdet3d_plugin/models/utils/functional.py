@@ -51,7 +51,7 @@ def pos2posemb2d(pos, num_pos_feats=128, temperature=10000):
         torch.Tensor: Positional embeddings tensor.
     """
     scale = 2 * math.pi
-    pos = pos * scale
+    pos = pos * scale  # 将位置向量缩放为弧度值，编码在sin，cos函数中的位置
     dim_t = torch.arange(num_pos_feats, dtype=torch.float32, device=pos.device)
     dim_t = temperature ** (2 * (dim_t // 2) / num_pos_feats)
     pos_x = pos[..., 0, None] / dim_t
